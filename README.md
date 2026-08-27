@@ -39,20 +39,21 @@ Open **`js/firebase-config.js`** — it has step-by-step comments. In short:
 
 > **Tip:** Until you paste real keys, the app runs in **Demo Mode** on a single device with pretend classmates — great for a dry run. Just open `index.html`.
 
-**Recommended Firestore rules** (paste in Firestore → Rules). Open enough for a classroom, auto-locks after your event day — **edit the date**:
+**Recommended Firestore rules** (paste in Firestore → Rules). Open enough for a classroom (data is anonymous codenames only), with a far-future safety cutoff so it keeps working **year after year** — no annual maintenance:
 ```
 rules_version = '2';
 service cloud.firestore {
   match /databases/{db}/documents {
     match /rooms/{room}/{document=**} {
-      allow read, write: if request.time < timestamp.date(2026, 9, 5);
+      allow read, write: if request.time < timestamp.date(2035, 9, 1);
     }
     match /rooms/{room} {
-      allow read, write: if request.time < timestamp.date(2026, 9, 5);
+      allow read, write: if request.time < timestamp.date(2035, 9, 1);
     }
   }
 }
 ```
+> Reusing it next year? Nothing to change — just host a fresh room on the day (it gets a new 4-letter code; old rooms don't interfere). Optionally tidy up by deleting old data in Firestore → Data. If you'd rather lock it down between events, bump the date back down to just after each year's event.
 
 ### 2. Host it
 Any static host works. To match your other apps, use **GitHub Pages**:
