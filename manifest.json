@@ -1,6 +1,6 @@
 {
-  "name": "First Day Outbreak",
-  "short_name": "Outbreak",
+  "name": "First Day BreakOut",
+  "short_name": "BreakOut",
   "description": "Get-to-know-you ice breaker that turns into a contact-tracing mystery.",
   "start_url": "./index.html",
   "display": "standalone",

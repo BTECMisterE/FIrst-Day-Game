@@ -4,20 +4,26 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1" />
   <meta name="theme-color" content="#0b1020" />
-  <title>First Day Outbreak</title>
+  <title>First Day BreakOut</title>
   <link rel="manifest" href="./manifest.json" />
-  <link rel="stylesheet" href="./css/styles.css" />
+  <link rel="stylesheet" href="./css/styles.css?v=2" />
 </head>
 <body>
   <div id="app"><!-- rendered by app.js --></div>
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
 
-  <script type="module" src="./js/app.js"></script>
+  <script type="module" src="./js/app.js?v=2"></script>
   <script>
+    // Always load the latest version: unregister any old service worker and clear its
+    // caches. (This app is online-only via Firebase, so no offline cache is needed.)
+    // The updated sw.js self-destructs, which also reloads any device stuck on an old build.
     if ("serviceWorker" in navigator) {
-      window.addEventListener("load", () =>
-        navigator.serviceWorker.register("./sw.js").catch(() => {})
-      );
+      navigator.serviceWorker.getRegistrations()
+        .then((regs) => regs.forEach((r) => r.unregister()))
+        .catch(() => {});
+    }
+    if (window.caches && caches.keys) {
+      caches.keys().then((keys) => keys.forEach((k) => caches.delete(k))).catch(() => {});
     }
   </script>
 </body>

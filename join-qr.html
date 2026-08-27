@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Scan to Join — First Day BreakOut</title>
+<style>
+  :root { --ink:#12203a; --muted:#5b6b86; --teal:#0f9e88; --line:#d6deec; }
+  * { box-sizing:border-box; }
+  body { margin:0; background:#f4f7fc; color:var(--ink); font-family:"Segoe UI",system-ui,-apple-system,Roboto,Arial,sans-serif; }
+  .print-hint { background:var(--teal); color:#fff; padding:10px 16px; display:flex; justify-content:space-between; align-items:center; }
+  .print-hint button { font:inherit; font-weight:800; border:0; background:#fff; color:var(--teal); padding:8px 16px; border-radius:8px; cursor:pointer; }
+  .poster { max-width:720px; margin:0 auto; padding:32px 28px; text-align:center; }
+  .brand { font-size:22px; font-weight:800; letter-spacing:0.3px; }
+  .brand .em { font-size:26px; }
+  h1 { font-size:44px; margin:18px 0 4px; }
+  .sub { color:var(--muted); font-size:18px; margin:0 0 22px; }
+  .qrbox { background:#fff; border:1px solid var(--line); border-radius:20px; padding:26px; display:inline-block; box-shadow:0 10px 30px rgba(18,32,58,0.08); }
+  .qrbox img { display:block; width:420px; height:420px; image-rendering:pixelated; }
+  .url { margin-top:22px; font-family:ui-monospace,"Cascadia Code",Consolas,monospace; font-size:20px; font-weight:700; word-break:break-all; }
+  .url .light { color:var(--muted); font-weight:400; }
+  .steps { margin:26px auto 0; max-width:520px; text-align:left; font-size:17px; line-height:1.5; }
+  .steps li { margin:8px 0; }
+  .room { margin-top:26px; font-size:20px; }
+  .room b { display:inline-block; min-width:220px; border-bottom:3px dashed var(--muted); margin-left:8px; }
+  .foot { margin-top:22px; color:var(--muted); font-size:15px; }
+  @media print {
+    .print-hint { display:none; }
+    body { background:#fff; }
+    .qrbox { box-shadow:none; }
+    @page { margin:12mm; }
+  }
+</style>
+</head>
+<body>
+  <div class="print-hint"><span>📄 Print this and post it where students sign in. Press Print → paper or Save as PDF.</span><button onclick="window.print()">🖨 Print</button></div>
+  <div class="poster">
+    <div class="brand"><span class="em">🦠</span> First Day BreakOut</div>
+    <h1>📲 Scan to join</h1>
+    <p class="sub">Point your phone camera at the code — no app to install.</p>
+    <div class="qrbox"><img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAA4QAAAOEAQMAAADDgG14AAAABlBMVEX///8AAABVwtN+AAAACXBIWXMAAA7EAAAOxAGVKw4bAAAEW0lEQVR4nO3dTXKjOBgGYFJeeJkjcBSORo7GUXyELL2YsmYGyfpDcae7utqemuddyYD0KDt/5oNMk4iI/N68h2Gu8ewSR/8c2AZz13z5x/751IxGIRKJRCKRSCQSiQPxr36lOYujLPvcWxQ/s9MsdEqr1zkTiUQikUgkEonEVxLXcE8RQ6428ugtjt6jOHVly0Gc86mNSCQSiUQikUgk/ooY+lGTda8CyijdAbgQiUQikUgkEonE/7w43e8AtPnYz5xC1wdEJBKJRCKRSCQSf15s0ohpF0s9OSVuM234s14hiU2IRCKRSCQSiUTiy4ijJHHLFy77sbYjaB106a+57hiFSCQSiUQikUgk9uKDhPobf8x3u/R/MUQikUgkEolEIvEPiKVcaHLoA9pqMY0+8vRmocug7tiIRCKRSCQSiUTil2KIk+c4iofPjZ0/3PpJo9FU9+uXhe6LE4lEIpFIJBKJxKeLqXCYQ5dp/IRuSVx9yrso9wJSl/5cb/h6uJBIJBKJRCKRSCQ+Q5xyY3+TVC5s9XMBIdYdy/40wNvALvccDn9EWYhIJBKJRCKRSCQ+FuMV1Vf2qerX/3GX/rrfAZgacepDJBKJRCKRSCQSnyg2P+Gn1S/TMUv9rEDzX63KqGz91DhlT0QikUgkEolEInEgjlKqgHIvoIghVwHT4FbCXFYfTCcSiUQikUgkEolPFlPW/aJDBbLl3qCQnWVcd5Tpc778UrcWdSESiUQikUgkEolfZq6R69T17EQxvUWz5NCpUz7FC855RCQSiUQikUgkEl9DnPvT4Vh3pGOpS3/Nq6/5bNxFemr30k8nEolEIpFIJBKJvfheTyk/5h/6c0qWQW9+yMfK1mMORQSRSCQSiUQikUh8DTFeOOoIanJ4f86UxdAvFLoQiUQikUgkEonEB+K6/3B/6k8v8VMZNbtYH/brFyueuZcTRCKRSCQSiUQi8eniv/nYD5ZGnkOieGvsZlJzrOSct0kkEolEIpFIJBJfRkx1R6hvH1wHUw4pk5rpKWXrcYWf6kEiEolEIpFIJBL/b2J/YeuEe255UnlWN6XcC7jEyqBZkkgkEolEIpFIJL6gOIcuzUaWuhaZ8ls0y/SmgCm55un3JYlEIpFIJBKJRGItPkiZ0qyxdWIIdVfOulcBU/4j0vTtBxaRSCQSiUQikUj8Y+J7GGZULpzz2c+H/9/qku8FzPWGr0QikUgkEolEInEstv05zYVbPhbt8u7MtwyU6YcHb+d80XZ4cpZIJBKJRCKRSCQ+V1zzuS/Ekt4u788ZdQSlJZdD3UEkEolEIpFIJBK/J96/vNfi6H32hzfbT7kKiB++XQUQiUQikUgkEonE54pNyh2AUd1xyKV/EQ+RSCQSiUQikUj8Qmwy5x/ul/IT/j75NtVVQEnccPnu31YBRCKRSCQSiUQi8cXEUVLd0R9LdUfzrO4p1G/SaXKJRlmSSCQSiUQikUgkPl8UEZHfmb8BC2NqXC4t5ysAAAAASUVORK5CYII=" alt="QR code to join the activity" /></div>
+    <div class="url"><span class="light">or go to </span>https://btecmistere.github.io/FIrst-Day-Game/</div>
+    <ol class="steps">
+      <li>Scan the code (or type the link above).</li>
+      <li>Enter the <b>4-letter room code</b> from the instructor's screen.</li>
+      <li>You'll get a fun <b>codename</b> — no name or personal info needed.</li>
+      <li>Go meet your classmates!</li>
+    </ol>
+    <div class="room">Room code: <b>&nbsp;</b></div>
+    <p class="foot">Anonymous &amp; account-free — just codenames. 🎭</p>
+  </div>
+</body>
+</html>

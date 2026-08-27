@@ -1,5 +1,5 @@
 // ══════════════════════════════════════════════════════════════
-//  First Day Outbreak — ice-breaker + contact-tracing mystery
+//  First Day BreakOut — ice-breaker + contact-tracing mystery
 //  Single-file app logic. Two backends: Firestore (real, multi-phone)
 //  or an in-memory Demo store (single device, seeded classmates).
 // ══════════════════════════════════════════════════════════════
@@ -39,7 +39,7 @@ const DEMO_TRAITS = [
   { t: 3, x: "has a husky named Kona" }, { t: 3, x: "has an identical twin" }, { t: 3, x: "plays the cello" }, { t: 3, x: "grew up on a dairy farm" },
 ];
 const CODE_CHARS = "ABCDEFGHJKMNPQRSTUVWXYZ23456789"; // no I,L,O,0,1
-const DEFAULT_STATIONS = ["Front-Desk Tablet", "Hand-Sanitizer Pump", "Candy Bowl", "Coffee Station"];
+const DEFAULT_OBJECTS = ["Front-Desk Tablet", "Hand-Sanitizer Pump", "Candy Bowl", "Coffee Station"];
 
 // ── Tiny utils ──────────────────────────────────────────────
 const $ = (id) => document.getElementById(id);
@@ -145,32 +145,22 @@ function makeDemoStore() {
 //  GAME HELPERS
 // ════════════════════════════════════════════════════════════
 const me = () => S.players.find((p) => p.id === S.session.pid) || null;
-const takenCodes = () => new Set([...S.players.map((p) => p.code), ...S.objects.map((o) => o.code)]);
+const takenCodes = () => new Set(S.players.map((p) => p.code));
 const persons = () => S.players.filter((p) => !p.isHost);
-const stations = () => S.objects;
 
-function lookupByCode(raw) {
+// find a student by the 4-letter code they read off their phone
+function lookupPerson(raw) {
   const c = raw.trim().toUpperCase();
-  const p = S.players.find((x) => x.code === c && !x.isHost);
-  if (p) return { kind: "person", target: p };
-  const o = S.objects.find((x) => x.code === c);
-  if (o) return { kind: "object", target: o };
-  return null;
+  return S.players.find((x) => x.code === c && !x.isHost) || null;
 }
 
 // distinct people a given pid has met
 function metPeople(pid) {
   const set = new Set();
   for (const c of S.contacts) {
-    if (c.type !== "person") continue;
     if (c.a === pid) set.add(c.b);
     else if (c.b === pid) set.add(c.a);
   }
-  return set;
-}
-function stationsVisited(pid) {
-  const set = new Set();
-  for (const c of S.contacts) if (c.type === "object" && c.a === pid) set.add(c.b);
   return set;
 }
 // facts other classmates recorded ABOUT a given person, generic → specific
@@ -192,10 +182,11 @@ function pairCoverage() {
 }
 
 // ── The epidemiology engine ────────────────────────────────
-// Deterministic, time-ordered spread from the two seeds.
+// Deterministic, time-ordered person-to-person spread from Patient Zero.
+// (The contaminated object spreads physically via UV powder only — it is
+//  intentionally NOT modeled here; students identify it by observation.)
 function computeSpread() {
   const pz = S.room?.patientZeroPid;
-  const srcObj = S.objects.find((o) => o.isSource);
   const state = {};
   persons().forEach((p) => (state[p.id] = { infected: false, onset: null, via: null }));
   if (pz && state[pz]) state[pz] = { infected: true, onset: 0, via: "seed" };
@@ -203,15 +194,10 @@ function computeSpread() {
   const sorted = [...S.contacts].sort((a, b) => (tms(a.createdAt) - tms(b.createdAt)) || (a.seq - b.seq));
   let step = 1;
   for (const c of sorted) {
-    if (c.type === "object") {
-      const p = state[c.a];
-      if (p && !p.infected && srcObj && c.b === srcObj.id) { state[c.a] = { infected: true, onset: step++, via: "object" }; }
-    } else {
-      const A = state[c.a], B = state[c.b];
-      if (!A || !B) continue;
-      if (A.infected && !B.infected) state[c.b] = { infected: true, onset: step++, via: c.a };
-      else if (B.infected && !A.infected) state[c.a] = { infected: true, onset: step++, via: c.b };
-    }
+    const A = state[c.a], B = state[c.b];
+    if (!A || !B) continue;
+    if (A.infected && !B.infected) state[c.b] = { infected: true, onset: step++, via: c.a };
+    else if (B.infected && !A.infected) state[c.a] = { infected: true, onset: step++, via: c.b };
   }
   return state;
 }
@@ -229,11 +215,9 @@ async function hostCreate() {
   await store.createRoom(rc, {
     phase: "lobby", patientZeroPid: null, answerRevealed: false, cluesRevealed: 0, createdAt: store.serverTime(),
   });
-  // seed station objects
-  const taken = new Set();
-  for (let i = 0; i < DEFAULT_STATIONS.length; i++) {
-    const c = code4(taken); taken.add(c);
-    await store.setObject(rc, "obj" + i, { name: DEFAULT_STATIONS[i], code: c, isSource: i === 1 });
+  // seed candidate objects (no codes — the object is physical-only, found by observation)
+  for (let i = 0; i < DEFAULT_OBJECTS.length; i++) {
+    await store.setObject(rc, "obj" + i, { name: DEFAULT_OBJECTS[i], isSource: i === 1 });
   }
   S.session = { role: "host", roomCode: rc, pid: null }; saveSession();
   await connectRoom(rc);
@@ -280,27 +264,17 @@ async function hostRandomPZ() {
 
 async function logCode(raw, fact = "") {
   const my = me(); if (!my) return;
-  const found = lookupByCode(raw);
-  if (!found) return toast("No match for that code. Ask again!", true);
-  if (found.kind === "person") {
-    const other = found.target;
-    if (other.id === my.id) return toast("That's your own code 🙂", true);
-    if (!fact || fact.trim().length < 3) return toast("Type a new fact you learned about them 🙂", true);
-    const cid = "PP_" + [my.id, other.id].sort().join("_");
-    const already = S.contacts.some((c) => c.id === cid);
-    if (!already) await store.addContact(S.session.roomCode, cid, { type: "person", a: my.id, b: other.id, createdAt: store.serverTime(), seq: Date.now() });
-    // record the fact I learned about them (one per direction; updates if re-logged)
-    await store.addFact(S.session.roomCode, "F_" + my.id + "_" + other.id, { by: my.id, about: other.id, text: fact.trim().slice(0, 120), tier: currentTraitTier, createdAt: store.serverTime() });
-    toast(already ? `New fact logged about ${other.codename}! 🧠` : `Met ${other.codename}! 🤝`);
-    return true;
-  } else {
-    const obj = found.target;
-    const cid = "PO_" + my.id + "_" + obj.id;
-    if (S.contacts.some((c) => c.id === cid)) return toast(`Already checked in at ${obj.name} ✓`);
-    await store.addContact(S.session.roomCode, cid, { type: "object", a: my.id, b: obj.id, createdAt: store.serverTime(), seq: Date.now() });
-    toast(`Checked in: ${obj.name} 📍`);
-    return true;
-  }
+  const other = lookupPerson(raw);
+  if (!other) return toast("No match for that code. Ask again!", true);
+  if (other.id === my.id) return toast("That's your own code 🙂", true);
+  if (!fact || fact.trim().length < 3) return toast("Type a new fact you learned about them 🙂", true);
+  const cid = "PP_" + [my.id, other.id].sort().join("_");
+  const already = S.contacts.some((c) => c.id === cid);
+  if (!already) await store.addContact(S.session.roomCode, cid, { type: "person", a: my.id, b: other.id, createdAt: store.serverTime(), seq: Date.now() });
+  // record the fact I learned about them (one per direction; updates if re-logged)
+  await store.addFact(S.session.roomCode, "F_" + my.id + "_" + other.id, { by: my.id, about: other.id, text: fact.trim().slice(0, 120), tier: currentTraitTier, createdAt: store.serverTime() });
+  toast(already ? `New fact logged about ${other.codename}! 🧠` : `Met ${other.codename}! 🤝`);
+  return true;
 }
 
 async function hostDripClue() {
@@ -315,7 +289,7 @@ async function hostDripClue() {
 async function hostSetPhase(phase) {
   if (phase === "reveal") {
     if (!S.room.patientZeroPid) return toast("Pick Patient Zero first (tap a student).", true);
-    if (!S.objects.some((o) => o.isSource)) return toast("Mark one object as the source first.", true);
+    if (!S.objects.some((o) => o.isSource)) return toast("Mark which object you contaminated first.", true);
     const spread = computeSpread();
     for (const p of persons()) {
       const st = spread[p.id];
@@ -339,7 +313,7 @@ function leave() { S.unsub.forEach((u) => u()); S.unsub = []; localStorage.remov
 
 // ── Demo seeding ────────────────────────────────────────────
 function seedDemoPlayers(rc) {
-  const n = 12, taken = new Set(S.objects.map((o) => o.code));
+  const n = 12, taken = new Set();
   for (let i = 0; i < n; i++) {
     const cn = `${ADJS[i % ADJS.length]} ${ANIMALS[(i * 3) % ANIMALS.length]}`;
     const cd = code4(taken); taken.add(cd);
@@ -364,8 +338,6 @@ function demoSimulate() {
       if (!S.facts.some((f) => f.id === fid)) { const tr = rand(DEMO_TRAITS); S.facts.push({ id: fid, by: p.id, about: other.id, text: tr.x, tier: tr.t, createdAt: t }); }
     }
   }
-  // some station check-ins
-  for (const p of ppl) if (Math.random() < 0.6) { const o = rand(S.objects); const cid = "PO_" + p.id + "_" + o.id; if (!S.contacts.some((c) => c.id === cid)) S.contacts.push({ id: cid, type: "object", a: p.id, b: o.id, createdAt: t, seq: t }); t += 500; }
   toast("Simulated a few minutes of mingling.");
   render();
 }
@@ -374,7 +346,7 @@ function demoSimulate() {
 //  RENDER
 // ════════════════════════════════════════════════════════════
 function header(role) {
-  return `<div class="brand"><span class="logo">🦠</span><h1>First Day Outbreak</h1><span class="role">${role}</span></div>`;
+  return `<div class="brand"><span class="logo">🦠</span><h1>First Day BreakOut</h1><span class="role">${role}</span></div>`;
 }
 
 function render() {
@@ -393,7 +365,7 @@ function renderHome() {
     ${header("welcome")}
     <div class="card center">
       <div style="font-size:56px">🧬</div>
-      <h2>First Day Outbreak</h2>
+      <h2>First Day BreakOut</h2>
       <p class="sub">A get-to-know-you mingle game… with a secret. Meet your classmates, then discover how far a "germ" can travel in one morning.</p>
       <button data-a="go-join">I'm a Student — Join</button>
       <button class="ghost mt" data-a="go-host">I'm the Instructor — Host</button>
@@ -458,7 +430,6 @@ function playerMingle(my) {
   const trait = TRAIT_PROMPTS[metCount % TRAIT_PROMPTS.length];
   currentTraitTier = trait.tier;
   const metNames = [...met].map((id) => S.players.find((p) => p.id === id)?.codename).filter(Boolean);
-  const st = stationsVisited(my.id);
   const done = metCount >= total && total > 0;
   app.innerHTML = `<div class="wrap">${header("student")}
     <div class="idcard" style="padding:14px">
@@ -469,13 +440,13 @@ function playerMingle(my) {
       </div>
     </div>
 
-    ${done ? `<div class="card center" style="border-color:var(--lime)"><div style="font-size:40px">🌟</div><h2>You met everyone!</h2><p class="sub">Legend. Help anyone still looking for people — and check in at any stations you missed.</p></div>`
+    ${done ? `<div class="card center" style="border-color:var(--lime)"><div style="font-size:40px">🌟</div><h2>You met everyone!</h2><p class="sub">Legend. Help anyone still looking for people to meet.</p></div>`
       : `<div class="mission"><div class="tag">Your mission</div><div class="txt">${MISSIONS[missionIdx]}</div></div>`}
 
     <div class="card">
       <h2>Log who you met</h2>
       <p class="sub">Chat first, then swap codes. <b>Already know them? Trade a fact neither of you knew.</b></p>
-      <label class="fld">Their 4-letter code (or a station card's code)</label>
+      <label class="fld">Their 4-letter code</label>
       <input id="logc" class="code-in" maxlength="4" autocapitalize="characters" autocomplete="off" placeholder="CODE" />
       <label class="fld">${esc(trait.label)}</label>
       <input id="logf" type="text" autocomplete="off" placeholder="${esc(trait.ph)}" />
@@ -484,7 +455,6 @@ function playerMingle(my) {
         <div class="bar"><span style="width:${pct}%"></span></div>
         <div class="cap"><span>Met ${metCount} of ${total} classmates</span><span>${pct}%</span></div>
       </div>
-      ${st.size ? `<p class="muted mt" style="font-size:13px">📍 Checked in at ${st.size} station${st.size>1?"s":""}.</p>` : ""}
       ${metNames.length ? `<div class="chips">${metNames.map((n) => `<span class="chip">${esc(n)}</span>`).join("")}</div>` : ""}
     </div>
     <button class="ghost" data-a="leave">Leave</button>
@@ -523,7 +493,7 @@ function playerInvestigate(my) {
   app.innerHTML = `<div class="wrap">${header("investigator")}
     <div class="card">
       <h2>🔬 The investigation</h2>
-      <p class="sub">Epidemiologists find "Patient Zero" by <b>symptom-onset order</b>: whoever showed symptoms <i>first</i> is the likely source. Read the line list, cross-check the contact log, and name the origin — the student <b>and</b> the object.</p>
+      <p class="sub">Two things to name: the <b>student</b> and the <b>object</b>. Find <b>Patient Zero</b> from the data — epidemiologists use <b>symptom-onset order</b>, so whoever showed symptoms <i>first</i> is the likely source (use the line list + dossier). Find the <b>contaminated object</b> the old-fashioned way: <b>look around</b> — what did the glowing hands all touch this morning?</p>
     </div>
 
     <div class="card">
@@ -561,18 +531,18 @@ function playerInvestigate(my) {
         <h2>File your conclusion</h2>
         <label class="fld">Who was Patient Zero?</label>
         <select id="gPZ">${["<option value=''>— choose —</option>", ...line.map((p) => `<option value="${p.id}" ${myGuess?.pzPid === p.id ? "selected" : ""}>${esc(p.codename)}</option>`)].join("")}</select>
-        <label class="fld">Which object was contaminated?</label>
+        <label class="fld">Which object was contaminated? (from what you observed)</label>
         <select id="gOBJ">${["<option value=''>— choose —</option>", ...S.objects.map((o) => `<option value="${o.id}" ${myGuess?.objId === o.id ? "selected" : ""}>${esc(o.name)}</option>`)].join("")}</select>
         <button class="mt" data-a="do-guess">${myGuess ? "Update our answer" : "Submit our answer"}</button>
         ${myGuess ? `<p class="muted mt center">Filed: ${esc(pzName(myGuess.pzPid))} + ${esc(S.objects.find((o)=>o.id===myGuess.objId)?.name||"?")}. Waiting for the reveal…</p>` : ""}
       </div>`}
 
     <details class="card"><summary style="cursor:pointer;font-weight:700">📇 Full contact log (evidence)</summary>
-      <div class="tbl-wrap mt"><table><thead><tr><th>#</th><th>Type</th><th>A</th><th>B</th></tr></thead><tbody>
+      <div class="tbl-wrap mt"><table><thead><tr><th>#</th><th>Who</th><th>met</th></tr></thead><tbody>
         ${[...S.contacts].sort((a,b)=>(tms(a.createdAt)-tms(b.createdAt))||(a.seq-b.seq)).map((c,i)=>{
           const A = S.players.find((p)=>p.id===c.a)?.codename||"?";
-          const B = c.type==="object" ? (S.objects.find((o)=>o.id===c.b)?.name||"?") : (S.players.find((p)=>p.id===c.b)?.codename||"?");
-          return `<tr><td>${i+1}</td><td>${c.type==="object"?"📍 station":"🤝 met"}</td><td>${esc(A)}</td><td>${esc(B)}</td></tr>`;
+          const B = S.players.find((p)=>p.id===c.b)?.codename||"?";
+          return `<tr><td>${i+1}</td><td>${esc(A)}</td><td>🤝 ${esc(B)}</td></tr>`;
         }).join("")}
       </tbody></table></div>
     </details>
@@ -610,15 +580,15 @@ function hostLobby() {
     ${joinInfo()}
     <div class="card">
       <h2>1 · Contaminated object <span class="badge src">powder this one</span></h2>
-      <p class="sub">Pick the object you'll dust with UV powder and tape a code card to. Everyone should touch it naturally.</p>
+      <p class="sub">Mark the object you'll dust with UV powder so everyone touches it naturally. It has <b>no code and isn't tracked</b> — it just spreads the germ physically. Students figure out which object it was by <b>observation</b>, and you confirm it at the reveal.</p>
       <div class="list">
-        ${S.objects.map((o) => `<div class="person ${o.isSource ? "" : ""}">
+        ${S.objects.map((o) => `<div class="person">
           <span class="em">${o.isSource ? "☣️" : "📦"}</span>
-          <div><div class="nm">${esc(o.name)}</div><div class="meta">card code: <b style="letter-spacing:2px">${o.code}</b></div></div>
+          <div><div class="nm">${esc(o.name)}</div>${o.isSource ? `<div class="meta">this is the one you dusted</div>` : ""}</div>
           <div class="tail">${o.isSource ? `<span class="badge src">SOURCE</span>` : `<button class="small ghost" data-a="src" data-arg="${o.id}">make source</button>`}</div>
         </div>`).join("")}
       </div>
-      <div class="row mt"><button class="ghost small" data-a="print-cards">🖨 Print station cards</button><button class="ghost small" data-a="cheatsheet">📄 Run-of-show</button></div>
+      <div class="row mt"><button class="ghost small" data-a="join-qr">📲 Join QR</button><button class="ghost small" data-a="cheatsheet">📄 Run-of-show</button></div>
     </div>
 
     <div class="card">
@@ -674,8 +644,7 @@ function hostMingle() {
     </div>
     <div class="stats">
       <div class="stat"><div class="n">${ppl.length}</div><div class="l">students</div></div>
-      <div class="stat"><div class="n">${S.contacts.filter((c)=>c.type==="person").length}</div><div class="l">handshakes</div></div>
-      <div class="stat"><div class="n">${S.contacts.filter((c)=>c.type==="object").length}</div><div class="l">check-ins</div></div>
+      <div class="stat"><div class="n">${S.contacts.length}</div><div class="l">handshakes</div></div>
       <div class="stat"><div class="n">${pct}%</div><div class="l">coverage</div></div>
     </div>
     <div class="card">
@@ -758,28 +727,6 @@ function hostInvestigate() {
   </div>`;
 }
 
-// ── Print station cards ──
-function printCards() {
-  const w = window.open("", "_blank");
-  if (!w) return toast("Allow pop-ups to print.", true);
-  const cards = S.objects.map((o) => `
-    <div class="pc">
-      <div class="pc-h">STATION CHECK-IN</div>
-      <div class="pc-n">${esc(o.name)}</div>
-      <div class="pc-c">${o.code}</div>
-      <div class="pc-f">Type this code in the app when you use this item.</div>
-    </div>`).join("");
-  w.document.write(`<html><head><title>Station cards — ${S.session.roomCode}</title><style>
-    body{font-family:Segoe UI,system-ui,sans-serif;margin:0;padding:20px;display:flex;flex-wrap:wrap;gap:16px}
-    .pc{border:3px dashed #111;border-radius:16px;width:320px;padding:22px;text-align:center;page-break-inside:avoid}
-    .pc-h{letter-spacing:3px;font-size:12px;color:#666}
-    .pc-n{font-size:24px;font-weight:800;margin:8px 0}
-    .pc-c{font-size:60px;font-weight:900;letter-spacing:10px;font-family:monospace}
-    .pc-f{font-size:12px;color:#666;margin-top:10px}
-  </style></head><body>${cards}<script>window.onload=()=>window.print()<\/script></body></html>`);
-  w.document.close();
-}
-
 // ════════════════════════════════════════════════════════════
 //  EVENT DELEGATION
 // ════════════════════════════════════════════════════════════
@@ -812,8 +759,8 @@ app.addEventListener("click", async (e) => {
     case "reveal-answer": return hostRevealAnswer();
     case "drip-clue": return hostDripClue();
     case "do-guess": return submitGuess($("gPZ").value, $("gOBJ").value);
-    case "print-cards": return printCards();
     case "cheatsheet": return window.open("./cheatsheet.html", "_blank");
+    case "join-qr": return window.open("./join-qr.html", "_blank");
     case "demo-sim": return demoSimulate();
   }
 });
@@ -822,9 +769,13 @@ app.addEventListener("click", async (e) => {
 //  BOOT
 // ════════════════════════════════════════════════════════════
 (async function boot() {
-  store = isConfigured ? await makeFirestoreStore() : makeDemoStore();
+  // ?demo in the URL forces the offline single-device Demo store even when
+  // Firebase is configured — handy for dry-run previews without touching Firestore.
+  const forceDemo = new URLSearchParams(location.search).has("demo");
+  store = (isConfigured && !forceDemo) ? await makeFirestoreStore() : makeDemoStore();
 
-  // Demo quick-starts (only in demo mode) for dry runs:
+  // Demo quick-starts (only in demo mode) for dry runs — add ?demo to the URL on the
+  // live site to enable, e.g. …/?demo#host :
   //   #host   → host room pre-seeded with pretend classmates
   //   #demo   → fully-simulated investigation, instructor view
   //   #student→ preview a student's mingle screen

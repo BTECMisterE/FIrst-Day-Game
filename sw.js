@@ -1,26 +1,20 @@
-// Minimal service worker so the app is installable as a PWA.
-// Network-first so students always get the latest during the event.
-const CACHE = "outbreak-v1";
-const ASSETS = ["./", "./index.html", "./css/styles.css", "./js/app.js", "./manifest.json"];
+// Self-destructing service worker.
+// Earlier versions cached the app shell, which left some devices stuck on an old
+// build. This version removes ALL caches, stops controlling pages, and reloads any
+// open tab — so from now on everyone always loads the latest version from the network.
+self.addEventListener("install", () => self.skipWaiting());
 
-self.addEventListener("install", (e) => {
-  e.waitUntil(caches.open(CACHE).then((c) => c.addAll(ASSETS)).catch(() => {}));
-  self.skipWaiting();
+self.addEventListener("activate", (event) => {
+  event.waitUntil((async () => {
+    const keys = await caches.keys();
+    await Promise.all(keys.map((k) => caches.delete(k)));
+    await self.clients.claim();
+    const clients = await self.clients.matchAll({ type: "window" });
+    for (const client of clients) {
+      try { client.navigate(client.url); } catch (e) { /* ignore */ }
+    }
+    await self.registration.unregister();
+  })());
 });
 
-self.addEventListener("activate", (e) => {
-  e.waitUntil(caches.keys().then((keys) => Promise.all(keys.filter((k) => k !== CACHE).map((k) => caches.delete(k)))));
-  self.clients.claim();
-});
-
-self.addEventListener("fetch", (e) => {
-  // Never intercept Firebase / Google traffic.
-  if (!e.request.url.startsWith(self.location.origin)) return;
-  e.respondWith(
-    fetch(e.request).then((res) => {
-      const copy = res.clone();
-      caches.open(CACHE).then((c) => c.put(e.request, copy)).catch(() => {});
-      return res;
-    }).catch(() => caches.match(e.request))
-  );
-});
+// No fetch handler — every request goes straight to the network.

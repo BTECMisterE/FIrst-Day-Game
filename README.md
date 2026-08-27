@@ -1,4 +1,4 @@
-# 🦠 First Day Outbreak
+# 🦠 First Day BreakOut
 
 A first-day-of-school **ice breaker that turns into a contact-tracing mystery** for health-tech students.
 
@@ -72,9 +72,8 @@ Your URL becomes `https://<you>.github.io/outbreak/`. Or just run locally:
 ## 🕹️ Running it on the day
 
 ### Before students arrive
-1. **Powder:** dust the senior's palms (and maybe a lanyard/pen they'll hand out) and dust **one object**. Tape that object's **station card** to it (print from the host screen — see below).
-2. Open the app → **"I'm the Instructor — Host"**. A **4-letter room code** appears. Put it + the URL on the projector.
-3. Click **🖨 Print station cards** and tape each code card to its object. *(Every object gets a card so the contaminated one doesn't stand out — only you know which is dusted.)*
+1. **Powder:** dust the senior's palms (and maybe a lanyard/pen they'll hand out) and dust **one high-traffic object** everyone will touch. The object has **no code and isn't tracked in the app** — it's there purely to spread the germ physically, and students crack it by observation.
+2. Open the app → **"I'm the Instructor — Host"**. A **4-letter room code** appears. Put it + the URL on the projector (or print the **📲 Join QR** poster).
 
 ### As students arrive
 4. They open the URL → **Join** → instantly get an **anonymous codename + 4-letter germ ID**. *No name, email, or personal info is ever asked for or stored.* (They can tap **↻ Give me a different codename** if they want another.)
@@ -82,7 +81,7 @@ Your URL becomes `https://<you>.github.io/outbreak/`. Or just run locally:
    - Ask your returning senior for the **codename on their phone** and tap **set** next to it → **Patient Zero** 🔴, **or**
    - Tap **⭐** to mark the returning seniors as they arrive, then hit **🎲 Random senior** to let the app pick one.
    - Then **powder that person** (the dusted sign-in pen or a welcome handshake — see "Deciding Patient Zero at sign-in" below).
-6. Confirm the **contaminated object** shows **SOURCE** ☣️ (default is the sanitizer pump — change it to whatever you actually dusted).
+6. In the app, mark which object you dusted as **SOURCE** ☣️ (default is the sanitizer pump — change it to whatever you actually dusted). This is just your answer key for the reveal; students never see it.
 7. Press **Start the mingle**.
 
 > **🖐️ Deciding Patient Zero at sign-in (covertly):** the powder must end up on whoever you tap. Two easy ways to decide in the moment: **(a)** dust the **sign-in pen** and hand *only* your chosen senior that pen (clean pen for everyone else); or **(b)** keep a pinch of powder in your palm and give them a "welcome back!" handshake. Then tap their codename in the app. Nobody notices, and you never commit before you see who showed up.
@@ -90,7 +89,7 @@ Your URL becomes `https://<you>.github.io/outbreak/`. Or just run locally:
 ### The mingle (~15–20 min)
 - Students get **missions** ("find someone who…"). They chat, swap codes, and **type each other's code** to log a meeting. Goal: **meet everyone**.
 - **Every meeting also records one new trait** about that person. The prompt climbs a **generic → personal ladder** (general → interest → background → personal), so a cohort that already knows each other still has to trade *new* info — and the traits stay usable as clues later (see below).
-- They also **check in at stations** by typing the card code on objects they use — *this is how the app captures who touched the contaminated object.* Encourage using the stations (sign in, grab candy, sanitize).
+- Meanwhile, make sure everyone naturally uses the **dusted object** (sign in on it, grab a candy, sanitize) so the powder spreads — but there's nothing to log for it.
 - Your screen shows **coverage %** and a **"still need to mingle"** nudge list. End when you're happy (100% is ideal; you control it).
 
 ### The reveal 🦠
@@ -101,7 +100,7 @@ Your URL becomes `https://<you>.github.io/outbreak/`. Or just run locally:
 10. Press **Open the investigation**. Each phone shows a **line list** (symptom-onset order), a **suspect dossier**, and the full **contact log**.
 11. In teams, students reason like disease detectives:
     - **Patient Zero** = earliest symptom onset (top of the line list). Confirm against the contact log.
-    - **The object** = the station the earliest cluster all checked into before onset.
+    - **The object** = figured out by **observation** — look at the glowing hands and ask "what did we all touch this morning?" The app doesn't track it; it's a discussion + eyes-on-the-room deduction.
     - **Which real classmate is that codename?** Open the **🗂 Suspect Dossier** for any case to read the traits classmates recorded about them (general → personal) and match the codename to a face in the room.
 12. **Stuck, or want a group finale?** Press **🔍 Drip a clue about Patient Zero** — it pushes the recorded traits about your index case to *every* phone, one at a time, **starting generic and getting more personal**, until the room shouts out who it is.
 13. Teams **submit** their answer (a person + an object). When ready, press **🎯 Reveal the answer** — every phone lights up with the truth and whether they got it.
@@ -110,7 +109,7 @@ Your URL becomes `https://<you>.github.io/outbreak/`. Or just run locally:
 
 ## 🧪 The epidemiology (why it's solvable)
 
-The app seeds the "infection" from your two picks — Patient Zero (onset 0) and the contaminated object — then spreads it **forward in time** along the exact meetings/check-ins students logged: you can only catch it from someone (or something) that was already contagious *before* you met them. That produces a genuine **line list** and **epi curve**. Because Patient Zero starts at onset 0, they sit at the top of the list; people whose only earlier exposure was the object form the cluster that fingers the fomite. It's the same logic real outbreak investigators use with symptom-onset dates — just compressed into 20 minutes.
+The app seeds the "infection" from Patient Zero (onset 0), then spreads it **forward in time** along the exact meetings students logged: you can only catch it from someone who was already contagious *before* you met them. That produces a genuine **line list** and **epi curve**, and because Patient Zero starts at onset 0 they sit at the top of the list — the same logic real outbreak investigators use with symptom-onset dates, compressed into 20 minutes. The **object** runs on a parallel *physical* track: the UV powder spreads by touch, and students identify the fomite the way real investigators often do first — by observation ("what did all the sick people have in common?").
 
 ---
 
@@ -118,8 +117,8 @@ The app seeds the "infection" from your two picks — Patient Zero (onset 0) and
 
 - **"No room with that code"** — codes are 4 letters, case-insensitive. Make sure you didn't reset the host (that ends the room).
 - **A student can't find someone's code** — they have to *ask*; that's the ice breaker working. Codes are on each student's own screen (top of their mingle page).
-- **Nobody checked into the contaminated object** — then it won't show in the data. Push station check-ins during mingle (make one a required "sign-in").
-- **Someone joined twice / typo name** — harmless; just don't mark a duplicate as Patient Zero.
+- **Students don't spot the object** — nudge them: "everyone's hands glow — what's the one thing you all touched on the way in?" It's an eyes-on-the-room deduction, not an app lookup.
+- **Someone joined twice** — harmless; just don't mark a duplicate as Patient Zero.
 - **Want *fewer* people infected** (spot-the-sick version) — end the mingle early, before full coverage. Less of the room will glow.
 - **Reset everything** — host presses **End & reset**. (Old room data lingers in Firestore harmlessly; the rules date auto-expires access.)
 
@@ -137,6 +136,7 @@ css/styles.css        styling
 js/app.js             all game logic (host + student + epidemiology engine + trait/clue system)
 js/firebase-config.js ← paste your Firebase keys here
 cheatsheet.html       printable one-page facilitator run-of-show (also linked from the host "📄 Run-of-show" button)
+join-qr.html          printable "Scan to join" QR poster (also linked from the host "📲 Join QR" button)
 manifest.json, sw.js  PWA (installable, offline-tolerant)
 ```
 
