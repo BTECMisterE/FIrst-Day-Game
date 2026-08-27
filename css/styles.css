@@ -226,3 +226,17 @@ svg.spread.animate .lnk { stroke-dasharray: 660; stroke-dashoffset: 660; animati
 @keyframes drawLink { to { stroke-dashoffset: 0; } }
 
 .legend { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-top: 12px; }
+
+/* ── Mingle timer ── */
+.timer { font-size: 46px; font-weight: 900; letter-spacing: 2px; color: var(--teal); font-variant-numeric: tabular-nums; }
+.timer.done { color: var(--red); animation: pulse 1s ease-in-out infinite; }
+.chip#mtimer { color: var(--teal); font-weight: 800; font-variant-numeric: tabular-nums; }
+.chip#mtimer.done { color: var(--red); border-color: var(--red); }
+
+/* ── Outbreak awards / stats ── */
+.awards { display: flex; flex-direction: column; gap: 8px; margin-top: 12px; }
+.award { display: flex; align-items: center; gap: 10px; background: #0e1530; border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px; }
+.award .ic { font-size: 22px; }
+.award .t { font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.6px; }
+.award .v { font-weight: 800; }
+.award.super { border-color: var(--red); }

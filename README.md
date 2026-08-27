@@ -87,7 +87,8 @@ Your URL becomes `https://<you>.github.io/outbreak/`. Or just run locally:
 > **🖐️ Deciding Patient Zero at sign-in (covertly):** the powder must end up on whoever you tap. Two easy ways to decide in the moment: **(a)** dust the **sign-in pen** and hand *only* your chosen senior that pen (clean pen for everyone else); or **(b)** keep a pinch of powder in your palm and give them a "welcome back!" handshake. Then tap their codename in the app. Nobody notices, and you never commit before you see who showed up.
 
 ### The mingle (~15–20 min)
-- Students get **missions** ("find someone who…"). They chat, swap codes, and **type each other's code** to log a meeting. Goal: **meet everyone**.
+- **Set a countdown** on the host screen (Start 10/15/20 min) — it shows on every student's phone to keep the energy up.
+- Students get a rotating **health-tech question to ask** ("What's your dream healthcare job?", "Any family in healthcare?"). They chat, **type each other's code**, and jot the answer. Goal: **meet everyone**. (No "go find someone" — calmer with a big group.)
 - **Every meeting also records one new trait** about that person. The prompt climbs a **generic → personal ladder** (general → interest → background → personal), so a cohort that already knows each other still has to trade *new* info — and the traits stay usable as clues later (see below).
 - Meanwhile, make sure everyone naturally uses the **dusted object** (sign in on it, grab a candy, sanitize) so the powder spreads — but there's nothing to log for it.
 - Your screen shows **coverage %** and a **"still need to mingle"** nudge list. End when you're happy (100% is ideal; you control it).
@@ -104,7 +105,7 @@ Your URL becomes `https://<you>.github.io/outbreak/`. Or just run locally:
     - **Which real classmate is that codename?** Open the **🗂 Suspect Dossier** for any case to read the traits classmates recorded about them (general → personal) and match the codename to a face in the room.
 12. **Stuck, or want a group finale?** Press **🔍 Drip a clue about Patient Zero** — it pushes the recorded traits about your index case to *every* phone, one at a time, **starting generic and getting more personal**, until the room shouts out who it is.
 13. Teams **submit** their answer (a person + an object). When ready, press **🎯 Reveal the answer** — every phone lights up with the truth and whether they got it.
-14. **Debrief with the spread map.** After the reveal, a **🌳 How it spread** transmission tree appears on your screen and every phone — each arrow is one classmate passing the germ to the next, branching out from Patient Zero. Hit **▶ Replay the outbreak** to animate it rippling through the room in real time order.
+14. **Debrief with the spread map + stats.** After the reveal, a **🌳 How it spread** transmission tree appears on your screen and every phone — each arrow is one classmate passing the germ to the next, branching out from Patient Zero. Alongside it: outbreak **stats** (total reach, longest chain, average onward spread) and **awards** — 🦠 **Super-spreader** (infected the most directly), 🤝 **Most social**, 🧼 **Dodged it**. Hit **▶ Replay the outbreak** to animate it rippling through the room in real time order.
 
 ---
 

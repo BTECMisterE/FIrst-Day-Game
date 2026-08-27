@@ -9,34 +9,27 @@ import { firebaseConfig, isConfigured } from "./firebase-config.js";
 const ADJS = ["Wandering","Curious","Brave","Sleepy","Clever","Jolly","Swift","Mellow","Bold","Cosmic","Fuzzy","Nimble","Sunny","Witty","Gentle","Daring","Lucky","Quiet","Zesty","Plucky","Radiant","Breezy"];
 const ANIMALS = ["Otter","Falcon","Panda","Lynx","Heron","Fox","Koala","Wren","Bison","Gecko","Moose","Puffin","Tapir","Raven","Ibex","Newt","Quokka","Marten","Egret","Yak","Civet","Dingo"];
 const EMOJIS = ["🦊","🐨","🦉","🦥","🐧","🦦","🐢","🦫","🦔","🐝","🦩","🐙","🦭","🐳","🦚","🦜","🐿️","🦎","🐡","🦌","🐼","🦇"];
-const MISSIONS = [
-  "Find someone who grew up in a different town than you.",
-  "Find someone who wants to work in the same field as you.",
-  "Find someone with the same first-letter in their name.",
-  "Find someone who's had a job before — ask what it was.",
-  "Find someone who took a science class they loved.",
-  "Find someone born in the same season as you.",
-  "Find someone who speaks more than one language.",
-  "Find someone who's nervous about the same thing you are today.",
-  "Find someone with a pet — ask its name.",
-  "Find someone who ate breakfast this morning.",
-  "Find someone who has a hidden talent — ask them to describe it.",
-  "Find someone who chose this program for a reason like yours.",
-];
-// Trait ladder — students record a NEW trait each meeting, starting generic and
-// getting more personal. Clues/dossier reveal them in this tier order (generic first).
-const TRAIT_PROMPTS = [
-  { tier: 0, label: "A general trait (easy to spot across the room)", ph: "e.g. in the afternoon cohort" },
-  { tier: 1, label: "Something they like (a subject, food, team…)", ph: "e.g. loves anatomy class" },
-  { tier: 2, label: "Something they've done (a past job or hobby)", ph: "e.g. used to be a barista" },
-  { tier: 3, label: "A unique personal detail", ph: "e.g. has a husky named Kona" },
+// Health-tech conversation prompts. Each meeting shows one question to ASK the person
+// you're talking to (no "go find someone" scavenger chaos). Ordered general → personal;
+// the `tier` also grades the recorded answer for the clue ladder.
+const QUESTIONS = [
+  { tier: 0, q: "What's your dream healthcare job?", ph: "e.g. ER nurse" },
+  { tier: 0, q: "What made you choose this program?", ph: "e.g. wants to help people" },
+  { tier: 1, q: "Do you have any family in healthcare?", ph: "e.g. mom's a paramedic" },
+  { tier: 1, q: "Which part of the body fascinates you most?", ph: "e.g. the heart" },
+  { tier: 1, q: "Favorite medical show — or one you can't stand?", ph: "e.g. loves Grey's Anatomy" },
+  { tier: 2, q: "What healthcare skill do you most want to master?", ph: "e.g. drawing blood" },
+  { tier: 2, q: "Any job you've had before this program?", ph: "e.g. was a barista" },
+  { tier: 2, q: "Ever been a patient for something memorable?", ph: "e.g. broke an arm at 8" },
+  { tier: 3, q: "Who's your healthcare hero or role model?", ph: "e.g. their aunt, an RN" },
+  { tier: 3, q: "Where do you hope to be working in 5 years?", ph: "e.g. a children's hospital" },
 ];
 const TIER_NAMES = ["general", "interest", "background", "personal"];
 const DEMO_TRAITS = [
-  { t: 0, x: "in the afternoon cohort" }, { t: 0, x: "sits near the front" }, { t: 0, x: "always has an iced coffee" }, { t: 0, x: "wears a blue lanyard" },
-  { t: 1, x: "loves anatomy class" }, { t: 1, x: "is a big soccer fan" }, { t: 1, x: "wants to go into pediatrics" }, { t: 1, x: "is obsessed with true-crime podcasts" },
-  { t: 2, x: "used to be a lifeguard" }, { t: 2, x: "worked as a barista" }, { t: 2, x: "volunteers at an animal shelter" }, { t: 2, x: "was a competitive swimmer" },
-  { t: 3, x: "has a husky named Kona" }, { t: 3, x: "has an identical twin" }, { t: 3, x: "plays the cello" }, { t: 3, x: "grew up on a dairy farm" },
+  { t: 0, x: "wants to be an ER nurse" }, { t: 0, x: "chose this to help people" }, { t: 0, x: "dreams of being a surgeon" }, { t: 0, x: "wants to work in peds" },
+  { t: 1, x: "mom is a paramedic" }, { t: 1, x: "fascinated by the heart" }, { t: 1, x: "loves Grey's Anatomy" }, { t: 1, x: "whole family are nurses" },
+  { t: 2, x: "wants to master drawing blood" }, { t: 2, x: "was a barista before" }, { t: 2, x: "volunteered at a hospital" }, { t: 2, x: "used to be a lifeguard" },
+  { t: 3, x: "their hero is their aunt, an RN" }, { t: 3, x: "hopes to work in a children's hospital" }, { t: 3, x: "broke their arm at 8" }, { t: 3, x: "grew up around a family clinic" },
 ];
 const CODE_CHARS = "ABCDEFGHJKMNPQRSTUVWXYZ23456789"; // no I,L,O,0,1
 const DEFAULT_OBJECTS = ["Front-Desk Tablet", "Hand-Sanitizer Pump", "Candy Bowl", "Coffee Station"];
@@ -62,6 +55,11 @@ function toast(msg, isErr = false) {
   const t = $("toast"); t.textContent = msg;
   t.className = "toast show" + (isErr ? " err" : "");
   clearTimeout(toastT); toastT = setTimeout(() => (t.className = "toast"), 2600);
+}
+// mingle countdown: endsAt is a plain ms number stored on the room
+function fmtRemain(endsAt) {
+  const s = Math.max(0, Math.round((endsAt - Date.now()) / 1000));
+  return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
 }
 
 // ── Local session (survive refresh) ─────────────────────────
@@ -287,10 +285,49 @@ function spreadSVG({ animate = false } = {}) {
   </svg>`;
 }
 
+function spreadStats() {
+  const spread = computeSpread();
+  const inf = persons().filter((p) => spread[p.id].infected);
+  const uninf = persons().filter((p) => !spread[p.id].infected);
+  const total = persons().length;
+  const pct = total ? Math.round((inf.length / total) * 100) : 0;
+  const nm = (id) => S.players.find((x) => x.id === id)?.codename || "?";
+  const em = (id) => S.players.find((x) => x.id === id)?.emoji || "";
+  // direct-infection counts → super-spreader
+  const kids = {};
+  inf.forEach((p) => { const v = spread[p.id].via; if (v && v !== "seed") kids[v] = (kids[v] || 0) + 1; });
+  let superId = null, superN = 0;
+  Object.entries(kids).forEach(([id, n]) => { if (n > superN || (n === superN && superId && spread[id].onset < spread[superId].onset)) { superN = n; superId = id; } });
+  // longest chain (hops from Patient Zero)
+  const dm = {};
+  const depthOf = (id) => { if (dm[id] != null) return dm[id]; const v = spread[id].via; return dm[id] = (!v || v === "seed") ? 0 : depthOf(v) + 1; };
+  let longest = 0; inf.forEach((p) => (longest = Math.max(longest, depthOf(p.id))));
+  // most social (most people met)
+  let socialId = null, socialN = -1;
+  persons().forEach((p) => { const n = metPeople(p.id).size; if (n > socialN) { socialN = n; socialId = p.id; } });
+  const infectors = Object.keys(kids).length;
+  const avgOnward = infectors ? ((inf.length - 1) / infectors).toFixed(1) : "0";
+  return { hasData: inf.length > 0, infN: inf.length, pct, longest, avgOnward, uninfN: uninf.length,
+    superName: superId ? nm(superId) : null, superEmoji: superId ? em(superId) : "", superN,
+    socialName: socialId ? nm(socialId) : null, socialEmoji: socialId ? em(socialId) : "", socialN };
+}
+
 function spreadCard() {
+  const s = spreadStats();
   return `<div class="card">
     <h2>🌳 How it spread</h2>
     <p class="sub">Every arrow is one classmate passing the germ to another, in the order it happened — follow the chains back to the single glowing red node: <b>Patient Zero</b>.</p>
+    ${s.hasData ? `<div class="stats">
+      <div class="stat"><div class="n">${s.infN}</div><div class="l">caught it</div></div>
+      <div class="stat"><div class="n">${s.pct}%</div><div class="l">of the room</div></div>
+      <div class="stat"><div class="n">${s.longest}</div><div class="l">longest chain</div></div>
+      <div class="stat"><div class="n">${s.avgOnward}</div><div class="l">avg spread / spreader</div></div>
+    </div>
+    <div class="awards">
+      ${s.superName ? `<div class="award super"><span class="ic">🦠</span><div><div class="t">Super-spreader</div><div class="v">${s.superEmoji} ${esc(s.superName)} — infected ${s.superN} classmate${s.superN > 1 ? "s" : ""} directly</div></div></div>` : ""}
+      ${s.socialName ? `<div class="award"><span class="ic">🤝</span><div><div class="t">Most social</div><div class="v">${s.socialEmoji} ${esc(s.socialName)} — met ${s.socialN} ${s.socialN === 1 ? "person" : "people"}</div></div></div>` : ""}
+      ${s.uninfN ? `<div class="award"><span class="ic">🧼</span><div><div class="t">Dodged it</div><div class="v">${s.uninfN} ${s.uninfN === 1 ? "classmate" : "classmates"} never caught it</div></div></div>` : `<div class="award"><span class="ic">😷</span><div><div class="t">Total wipeout</div><div class="v">One person contaminated the entire room</div></div></div>`}
+    </div>` : ""}
     <div class="spread-wrap">${spreadSVG({ animate: playSpread })}</div>
     <div class="legend"><span class="badge pz">🔴 Patient Zero</span><span class="badge src">→ passed it on</span><span class="chip">🩶 never caught it</span></div>
     <button class="ghost small mt" data-a="replay-spread">▶ Replay the outbreak</button>
@@ -356,6 +393,12 @@ async function hostRandomPZ() {
   await hostSetPZ(pick.id);
   toast(`🎲 ${pick.codename} is your index case — go powder them!`);
 }
+async function startMingleTimer(mins) { await store.updateRoom(S.session.roomCode, { mingleEndsAt: Date.now() + mins * 60000 }); }
+async function addMingleTime(secs) {
+  const base = S.room?.mingleEndsAt && S.room.mingleEndsAt > Date.now() ? S.room.mingleEndsAt : Date.now();
+  await store.updateRoom(S.session.roomCode, { mingleEndsAt: base + secs * 1000 });
+}
+async function clearMingleTimer() { await store.updateRoom(S.session.roomCode, { mingleEndsAt: null }); }
 
 async function logCode(raw, fact = "") {
   const my = me(); if (!my) return;
@@ -521,9 +564,8 @@ function playerMingle(my) {
   const total = persons().length - 1;
   const met = metPeople(my.id); const metCount = met.size;
   const pct = total > 0 ? Math.round((metCount / total) * 100) : 0;
-  const missionIdx = metCount % MISSIONS.length;
-  const trait = TRAIT_PROMPTS[metCount % TRAIT_PROMPTS.length];
-  currentTraitTier = trait.tier;
+  const q = QUESTIONS[metCount % QUESTIONS.length];
+  currentTraitTier = q.tier;
   const metNames = [...met].map((id) => S.players.find((p) => p.id === id)?.codename).filter(Boolean);
   const done = metCount >= total && total > 0;
   app.innerHTML = `<div class="wrap">${header("student")}
@@ -534,17 +576,18 @@ function playerMingle(my) {
         <div class="muted" style="font-size:13px">Your code: <b style="color:var(--teal);letter-spacing:3px">${my.code}</b></div></div>
       </div>
     </div>
+    ${S.room?.mingleEndsAt ? `<div class="center" style="margin:8px 0 -2px">⏳ <span class="chip" id="mtimer">${fmtRemain(S.room.mingleEndsAt)}</span> <span class="muted" style="font-size:12px">left to mingle</span></div>` : ""}
 
     ${done ? `<div class="card center" style="border-color:var(--lime)"><div style="font-size:40px">🌟</div><h2>You met everyone!</h2><p class="sub">Legend. Help anyone still looking for people to meet.</p></div>`
-      : `<div class="mission"><div class="tag">Your mission</div><div class="txt">${MISSIONS[missionIdx]}</div></div>`}
+      : `<div class="mission"><div class="tag">Ask your new classmate</div><div class="txt">${esc(q.q)}</div></div>`}
 
     <div class="card">
       <h2>Log who you met</h2>
-      <p class="sub">Chat first, then swap codes. <b>Already know them? Trade a fact neither of you knew.</b></p>
+      <p class="sub">Chat, ask the question above, then swap codes and jot their answer. <b>Already know them? Ask it anyway — learn something new.</b></p>
       <label class="fld">Their 4-letter code</label>
       <input id="logc" class="code-in" maxlength="4" autocapitalize="characters" autocomplete="off" placeholder="CODE" />
-      <label class="fld">${esc(trait.label)}</label>
-      <input id="logf" type="text" autocomplete="off" placeholder="${esc(trait.ph)}" />
+      <label class="fld">Their answer</label>
+      <input id="logf" type="text" autocomplete="off" placeholder="${esc(q.ph)}" />
       <button class="mt" data-a="do-log">Add contact ✓</button>
       <div class="progress mt">
         <div class="bar"><span style="width:${pct}%"></span></div>
@@ -737,6 +780,15 @@ function hostMingle() {
         <div class="cap"><span>${met} of ${total} possible pairs have met</span><span>${pct}%</span></div>
       </div>
     </div>
+    <div class="card center">
+      <h2 style="margin-bottom:6px">⏱️ Mingle timer</h2>
+      ${S.room?.mingleEndsAt
+        ? `<div class="timer" id="mtimer">${fmtRemain(S.room.mingleEndsAt)}</div>
+           <div class="row mt"><button class="ghost small" data-a="timer-add">+1:00</button><button class="ghost small" data-a="timer-reset">Reset</button></div>
+           <p class="muted" style="font-size:12px;margin-top:8px">Shows on every student's phone too.</p>`
+        : `<p class="sub">Put a countdown on every phone to keep the energy up.</p>
+           <div class="row"><button class="ghost small" data-a="timer-10">Start 10:00</button><button class="small" data-a="timer-15">Start 15:00</button><button class="ghost small" data-a="timer-20">Start 20:00</button></div>`}
+    </div>
     <div class="stats">
       <div class="stat"><div class="n">${ppl.length}</div><div class="l">students</div></div>
       <div class="stat"><div class="n">${S.contacts.length}</div><div class="l">handshakes</div></div>
@@ -854,12 +906,26 @@ app.addEventListener("click", async (e) => {
     case "reveal-answer": return hostRevealAnswer();
     case "drip-clue": return hostDripClue();
     case "replay-spread": playSpread = true; render(); setTimeout(() => { playSpread = false; }, 80); return;
+    case "timer-10": return startMingleTimer(10);
+    case "timer-15": return startMingleTimer(15);
+    case "timer-20": return startMingleTimer(20);
+    case "timer-add": return addMingleTime(60);
+    case "timer-reset": return clearMingleTimer();
     case "do-guess": return submitGuess($("gPZ").value, $("gOBJ").value);
     case "cheatsheet": return window.open("./cheatsheet.html", "_blank");
     case "join-qr": return window.open("./join-qr.html", "_blank");
     case "demo-sim": return demoSimulate();
   }
 });
+
+// Tick the mingle countdown once a second (updates #mtimer in place — no full re-render).
+setInterval(() => {
+  const el = document.getElementById("mtimer");
+  const end = S.room?.mingleEndsAt;
+  if (!el || !end) return;
+  el.textContent = fmtRemain(end);
+  el.classList.toggle("done", Date.now() >= end);
+}, 1000);
 
 // ════════════════════════════════════════════════════════════
 //  BOOT
@@ -885,7 +951,7 @@ app.addEventListener("click", async (e) => {
     await hostCreate();
     await hostSetPZ(persons()[0].id);
     if (hash === "host") return;
-    if (hash === "student") { await hostSetPhase("mingle"); S.session = { role: "player", roomCode: S.room.id, pid: persons()[1].id }; return render(); }
+    if (hash === "student") { await hostSetPhase("mingle"); await store.updateRoom(S.room.id, { mingleEndsAt: Date.now() + 14 * 60000 + 37000 }); S.session = { role: "player", roomCode: S.room.id, pid: persons()[1].id }; return render(); }
     demoSimulate();
     await hostSetPhase("reveal");
     await hostSetPhase("investigate");
