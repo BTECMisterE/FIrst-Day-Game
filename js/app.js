@@ -202,6 +202,101 @@ function computeSpread() {
   return state;
 }
 
+// ── "How it spread" transmission tree — built from computeSpread's via/onset ──
+let playSpread = false; // one-shot flag set by the ▶ Replay button
+
+function spreadLayout() {
+  const spread = computeSpread();
+  const pmap = {}; persons().forEach((p) => (pmap[p.id] = p));
+  const infected = persons().filter((p) => spread[p.id].infected);
+  const uninfected = persons().filter((p) => !spread[p.id].infected);
+  const rootId = Object.keys(spread).find((id) => spread[id].via === "seed" && spread[id].infected);
+  if (!rootId) return { hasTree: false, uninfected, width: 320, height: 80 };
+
+  // children map, ordered by onset
+  const children = {};
+  infected.forEach((p) => { const v = spread[p.id].via; if (v && v !== "seed") (children[v] = children[v] || []).push(p.id); });
+  Object.values(children).forEach((arr) => arr.sort((a, b) => spread[a].onset - spread[b].onset));
+
+  // depth from root + traversal order
+  const depth = { [rootId]: 0 }, order = [];
+  (function walk(id) { order.push(id); (children[id] || []).forEach((k) => { depth[k] = depth[id] + 1; walk(k); }); })(rootId);
+  const maxDepth = Math.max(0, ...Object.values(depth));
+
+  // tidy y-rows (leaves get sequential rows; parents centre over their children)
+  const row = {}; let rc = 0;
+  (function assignRow(id) {
+    const kids = children[id] || [];
+    if (!kids.length) { row[id] = rc++; return row[id]; }
+    const kr = kids.map(assignRow);
+    row[id] = (kr[0] + kr[kr.length - 1]) / 2; return row[id];
+  })(rootId);
+  const maxRow = Math.max(0, ...Object.values(row));
+
+  const LEFT = 96, TOP = 64, RIGHT = 150, ROWGAP = 84, BOTTOM = 44;
+  const COLW = Math.max(96, Math.min(180, Math.round(820 / (maxDepth || 1))));
+  const width = LEFT + maxDepth * COLW + RIGHT;
+  const treeH = TOP + maxRow * ROWGAP + BOTTOM;
+
+  const nodes = order.map((id) => {
+    const p = pmap[id];
+    return { id, codename: p.codename, emoji: p.emoji, onset: spread[id].onset, isPZ: id === rootId,
+      x: LEFT + depth[id] * COLW, y: TOP + row[id] * ROWGAP, r: id === rootId ? 26 : 20 };
+  });
+  const npos = {}; nodes.forEach((n) => (npos[n.id] = n));
+  const links = [];
+  infected.forEach((p) => {
+    const v = spread[p.id].via;
+    if (v && v !== "seed" && npos[v]) { const a = npos[v], b = npos[p.id];
+      links.push({ x1: a.x + a.r, y1: a.y, x2: b.x - b.r, y2: b.y, onset: spread[p.id].onset }); }
+  });
+
+  // uninfected footer strip
+  let height = treeH, unPos = [];
+  if (uninfected.length) {
+    const uy = treeH + 20;
+    uninfected.forEach((p, i) => unPos.push({ emoji: p.emoji, x: LEFT + (i % 14) * 46, y: uy + Math.floor(i / 14) * 44 }));
+    height = uy + 44 + Math.floor((uninfected.length - 1) / 14) * 44;
+  }
+  return { hasTree: true, nodes, links, width, height, uninfected: unPos, count: infected.length };
+}
+
+function spreadSVG({ animate = false } = {}) {
+  const L = spreadLayout();
+  if (!L.hasTree) return `<p class="muted">The spread map appears once the outbreak is revealed.</p>`;
+  const del = (o) => (animate ? `animation-delay:${(o * 0.12).toFixed(2)}s` : "");
+  const trunc = (s) => (s.length > 14 ? s.slice(0, 13) + "…" : s);
+  const link = (l) => { const dx = Math.max(24, (l.x2 - l.x1) / 2);
+    return `<path class="lnk" style="${del(l.onset)}" d="M${l.x1} ${l.y1} C${l.x1 + dx} ${l.y1} ${l.x2 - dx} ${l.y2} ${l.x2} ${l.y2}" marker-end="url(#sp-arrow)"/>`; };
+  const node = (n) => `<g class="node${n.isPZ ? " pz" : ""}" style="${del(n.onset)}">
+      ${n.isPZ ? `<circle class="halo" cx="${n.x}" cy="${n.y}" r="${n.r + 9}"/>` : ""}
+      <circle class="dot" cx="${n.x}" cy="${n.y}" r="${n.r}"/>
+      <text class="em" x="${n.x}" y="${n.y}" dy="0.34em" text-anchor="middle">${n.emoji}</text>
+      <text class="nm" x="${n.x}" y="${n.y + n.r + 16}" text-anchor="middle">${esc(trunc(n.codename))}</text>
+      ${n.isPZ ? `<text class="pzlbl" x="${n.x}" y="${n.y - n.r - 12}" text-anchor="middle">PATIENT ZERO</text>` : ""}
+    </g>`;
+  const un = L.uninfected.length ? `<g class="un">
+      <text class="unlbl" x="30" y="${L.uninfected[0].y - 20}">Never caught it (${L.uninfected.length})</text>
+      ${L.uninfected.map((u) => `<circle class="dot out" cx="${u.x}" cy="${u.y}" r="13"/><text class="em sm" x="${u.x}" y="${u.y}" dy="0.34em" text-anchor="middle">${u.emoji}</text>`).join("")}
+    </g>` : "";
+  return `<svg class="spread${animate ? " animate" : ""}" viewBox="0 0 ${L.width} ${L.height}" preserveAspectRatio="xMidYMid meet" role="img" aria-label="Transmission tree: how the germ spread from Patient Zero">
+    <defs><marker id="sp-arrow" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 L10 5 L0 10 z"/></marker></defs>
+    <g class="links">${L.links.map(link).join("")}</g>
+    <g class="nodes">${L.nodes.map(node).join("")}</g>
+    ${un}
+  </svg>`;
+}
+
+function spreadCard() {
+  return `<div class="card">
+    <h2>🌳 How it spread</h2>
+    <p class="sub">Every arrow is one classmate passing the germ to another, in the order it happened — follow the chains back to the single glowing red node: <b>Patient Zero</b>.</p>
+    <div class="spread-wrap">${spreadSVG({ animate: playSpread })}</div>
+    <div class="legend"><span class="badge pz">🔴 Patient Zero</span><span class="badge src">→ passed it on</span><span class="chip">🩶 never caught it</span></div>
+    <button class="ghost small mt" data-a="replay-spread">▶ Replay the outbreak</button>
+  </div>`;
+}
+
 // ════════════════════════════════════════════════════════════
 //  ACTIONS
 // ════════════════════════════════════════════════════════════
@@ -526,7 +621,7 @@ function playerInvestigate(my) {
           <div class="person"><span class="em">☣️</span><div><div class="nm">${esc(answerObj?.name || "?")}</div><div class="meta">Contaminated object (fomite)</div></div></div>
         </div>
         ${myGuess ? `<p class="mt" style="font-weight:800;color:${myGuess.pzPid === answerPZ && myGuess.objId === answerObj?.id ? "var(--lime)" : "var(--amber)"}">${myGuess.pzPid === answerPZ && myGuess.objId === answerObj?.id ? "✅ Your team nailed it!" : "So close — compare with your guess."}</p>` : ""}
-      </div>`
+      </div>${spreadCard()}`
     : `<div class="card">
         <h2>File your conclusion</h2>
         <label class="fld">Who was Patient Zero?</label>
@@ -721,7 +816,7 @@ function hostInvestigate() {
       </div>
     </div>
     ${revealed
-      ? `<div class="card" style="border-color:var(--amber)"><h2>Answer revealed ✔</h2><p class="sub">On every student's screen now: <b>${esc(pzName(answerPZ))}</b> (Patient Zero) + <b>${esc(answerObj?.name||"?")}</b>.${getNote(answerPZ) ? ` <span class="muted">📌 ${esc(getNote(answerPZ))}</span>` : ""}</p></div>`
+      ? `<div class="card" style="border-color:var(--amber)"><h2>Answer revealed ✔</h2><p class="sub">On every student's screen now: <b>${esc(pzName(answerPZ))}</b> (Patient Zero) + <b>${esc(answerObj?.name||"?")}</b>.${getNote(answerPZ) ? ` <span class="muted">📌 ${esc(getNote(answerPZ))}</span>` : ""}</p></div>${spreadCard()}`
       : `<button data-a="reveal-answer">🎯 Reveal the answer to everyone</button>`}
     <button class="ghost mt" data-a="leave">End & reset</button>
   </div>`;
@@ -758,6 +853,7 @@ app.addEventListener("click", async (e) => {
     case "back-mingle": return hostSetPhase("mingle");
     case "reveal-answer": return hostRevealAnswer();
     case "drip-clue": return hostDripClue();
+    case "replay-spread": playSpread = true; render(); setTimeout(() => { playSpread = false; }, 80); return;
     case "do-guess": return submitGuess($("gPZ").value, $("gOBJ").value);
     case "cheatsheet": return window.open("./cheatsheet.html", "_blank");
     case "join-qr": return window.open("./join-qr.html", "_blank");
@@ -780,8 +876,10 @@ app.addEventListener("click", async (e) => {
   //   #demo   → fully-simulated investigation, instructor view
   //   #student→ preview a student's mingle screen
   //   #solve  → preview a student's investigation screen (with clues)
+  //   #reveal → instructor investigation after the answer is revealed (spread tree)
+  //   #solved → student investigation after the answer is revealed (spread tree)
   const hash = location.hash.replace("#", "");
-  const DEMOS = ["host", "demo", "student", "solve"];
+  const DEMOS = ["host", "demo", "student", "solve", "reveal", "solved"];
   if (store.kind === "demo" && DEMOS.includes(hash)) {
     S.session = {}; localStorage.removeItem(SS);
     await hostCreate();
@@ -791,7 +889,8 @@ app.addEventListener("click", async (e) => {
     demoSimulate();
     await hostSetPhase("reveal");
     await hostSetPhase("investigate");
-    if (hash === "solve") { await store.updateRoom(S.room.id, { cluesRevealed: 2 }); S.session = { role: "player", roomCode: S.room.id, pid: persons()[1].id }; return render(); }
+    if (hash === "reveal" || hash === "solved") await store.updateRoom(S.room.id, { answerRevealed: true, cluesRevealed: 99 });
+    if (hash === "solve" || hash === "solved") { if (hash === "solve") await store.updateRoom(S.room.id, { cluesRevealed: 2 }); S.session = { role: "player", roomCode: S.room.id, pid: persons()[1].id }; return render(); }
     return;
   }
 

@@ -104,6 +104,7 @@ Your URL becomes `https://<you>.github.io/outbreak/`. Or just run locally:
     - **Which real classmate is that codename?** Open the **🗂 Suspect Dossier** for any case to read the traits classmates recorded about them (general → personal) and match the codename to a face in the room.
 12. **Stuck, or want a group finale?** Press **🔍 Drip a clue about Patient Zero** — it pushes the recorded traits about your index case to *every* phone, one at a time, **starting generic and getting more personal**, until the room shouts out who it is.
 13. Teams **submit** their answer (a person + an object). When ready, press **🎯 Reveal the answer** — every phone lights up with the truth and whether they got it.
+14. **Debrief with the spread map.** After the reveal, a **🌳 How it spread** transmission tree appears on your screen and every phone — each arrow is one classmate passing the germ to the next, branching out from Patient Zero. Hit **▶ Replay the outbreak** to animate it rippling through the room in real time order.
 
 ---
 
