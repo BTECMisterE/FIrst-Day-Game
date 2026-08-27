@@ -15,12 +15,13 @@
 // ─────────────────────────────────────────────────────────────
 
 export const firebaseConfig = {
-  apiKey: "PASTE_YOUR_API_KEY",
-  authDomain: "PASTE_YOUR_PROJECT.firebaseapp.com",
-  projectId: "PASTE_YOUR_PROJECT_ID",
-  storageBucket: "PASTE_YOUR_PROJECT.appspot.com",
-  messagingSenderId: "PASTE_SENDER_ID",
-  appId: "PASTE_APP_ID",
+  apiKey: "AIzaSyAzrTKcCiR3Gmqjs7isghAxi61ICYDrsaA",
+  authDomain: "welcome-activity.firebaseapp.com",
+  projectId: "welcome-activity",
+  storageBucket: "welcome-activity.firebasestorage.app",
+  messagingSenderId: "713900888270",
+  appId: "1:713900888270:web:970e56e55902a6f2f8809f",
+  measurementId: "G-D8992F6359",
 };
 
 // If you leave the placeholders above, the app runs in OFFLINE DEMO MODE
