@@ -339,7 +339,7 @@ function spreadCard() {
 // ════════════════════════════════════════════════════════════
 async function connectRoom(rc) {
   S.unsub.forEach((u) => u()); S.unsub = [];
-  S.unsub.push(store.listen(rc, () => render()));
+  S.unsub.push(store.listen(rc, () => scheduleRender()));
 }
 
 async function hostCreate() {
@@ -487,7 +487,69 @@ function header(role) {
   return `<div class="brand"><span class="logo">🦠</span><h1>First Day BreakOut</h1><span class="role">${role}</span></div>`;
 }
 
+// ── Re-render safety ────────────────────────────────────────
+// A repaint replaces app.innerHTML, so it also replaces whatever input a
+// student is half-way through typing into. Snapshots fire constantly during
+// the mingle (every join / contact / fact from every phone in the room), so
+// without these guards the code box clears itself out from under them.
+//   1. scheduleRender (used by the store listeners) never repaints while a
+//      text field has focus — it queues the repaint until they're done.
+//   2. every repaint carries input values + caret position across.
+let rafQueued = false, deferredRender = false;
+
+function typingNow() {
+  const el = document.activeElement;
+  return !!el && app.contains(el) && (el.tagName === "INPUT" || el.tagName === "TEXTAREA");
+}
+// Data arrived from another phone. Repaint soon — but not mid-keystroke,
+// unless the instructor moved the whole room to a new phase (that must land now).
+let lastPhase = null;
+function scheduleRender() {
+  const phase = S.room?.phase || null;
+  if (typingNow() && phase === lastPhase) { deferredRender = true; return; }
+  if (rafQueued) return;
+  rafQueued = true;
+  requestAnimationFrame(() => { rafQueued = false; render(); });
+}
+// Once they leave the field, paint in whatever arrived while they were typing.
+app.addEventListener("focusout", () => setTimeout(() => {
+  if (deferredRender && !typingNow()) render();
+}, 0));
+
+function captureFields() {
+  const snap = { values: {}, focus: null, start: null, end: null };
+  app.querySelectorAll("input[id], textarea[id]").forEach((el) => (snap.values[el.id] = el.value));
+  const a = document.activeElement;
+  if (a && a.id && app.contains(a)) {
+    snap.focus = a.id;
+    try { snap.start = a.selectionStart; snap.end = a.selectionEnd; } catch { /* no caret on this type */ }
+  }
+  return snap;
+}
+function restoreFields(snap) {
+  for (const [id, v] of Object.entries(snap.values)) {
+    if (!v) continue;
+    const el = $(id);
+    if (!el) continue;
+    // keep what they typed: an untouched new field, or the one they were editing
+    if (!el.value || id === snap.focus) el.value = v;
+  }
+  if (!snap.focus) return;
+  const el = $(snap.focus);
+  if (!el) return;
+  el.focus();
+  if (snap.start != null) { try { el.setSelectionRange(snap.start, snap.end); } catch {} }
+}
+
 function render() {
+  const snap = captureFields();
+  deferredRender = false;
+  paint();
+  restoreFields(snap);
+}
+
+function paint() {
+  lastPhase = S.room?.phase || null;
   const { role, roomCode: rc } = S.session;
   if (!role) return renderHome();
   if (role === "join") return renderJoin();
@@ -880,12 +942,21 @@ function hostInvestigate() {
 function doLog() {
   const v = $("logc")?.value || "", f = $("logf")?.value || "";
   if (v.length < 3) return toast("Codes are 4 characters.", true);
-  logCode(v, f).then((ok) => { if (ok) { const i = $("logc"), j = $("logf"); if (i) i.value = ""; if (j) j.value = ""; } });
+  logCode(v, f).then((ok) => {
+    if (!ok) return;
+    const i = $("logc"), j = $("logf");
+    if (i) i.value = ""; if (j) j.value = "";
+    render(); // fields are empty now, so a repaint is safe — show the new count right away
+    $("logc")?.focus();
+  });
 }
 
 app.addEventListener("click", async (e) => {
   const btn = e.target.closest("[data-a]"); if (!btn) return;
   const a = btn.dataset.a, arg = btn.dataset.arg;
+  // Tapping any control other than "add contact" means they're done typing —
+  // release the repaint lock so queued screen changes (joining, phase flips) land.
+  if (a !== "do-log" && typingNow()) document.activeElement.blur();
   switch (a) {
     case "go-join": S.session = { role: "join" }; saveSession(); return render();
     case "home": S.session = {}; saveSession(); return render();
